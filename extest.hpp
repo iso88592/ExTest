@@ -221,6 +221,30 @@ class expect
         }
         return *this;
     }
+    expect& operator<< (const std::string y)
+    {
+        other = y;
+        switch (override)
+        {
+            case Have:
+                operation = "have";
+                check2(std::find(value().begin(), value().end(), y) != value().end());
+                return *this;
+            case NotHave:
+                operation = "not have";
+                check2(std::find(value().begin(), value().end(), y) == value().end());
+                return *this;
+            default:
+                TestCaseBuffer::instance().printf("Not allowed  %s:%d\n",file,line);
+                TestCaseBuffer::instance().pushFail(isAssert);
+                return *this;
+        }
+        return *this;
+    }
+    expect& operator<< (const char* y)
+    {
+        return operator<<(std::string(y));
+    }
     template <typename T2>
     expect& operator<< (const T2& y)
     {
