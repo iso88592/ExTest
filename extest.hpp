@@ -4,18 +4,21 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#ifndef _WIN32
+    #include <sys/types.h>
+	#include <sys/wait.h>
+	#include <sys/ptrace.h>
+	#include <sys/user.h>
+	#include <execinfo.h>
+	#include <dlfcn.h>
+    #include <cxxabi.h>
+#else
+#endif
 #include <stdarg.h>
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <sys/ptrace.h>
-#include <sys/user.h>
-#include <execinfo.h>
 #include <string>
-#include <cxxabi.h>
-#include <dlfcn.h>
 
 typedef void (*ExTestCase)(void);
 
@@ -383,11 +386,13 @@ TEST(ExTest, FailingExpect)
     Expect v to nothave 2;
     Everything in v should be less than 1;
 }
+
 TEST(ExTest, FailingAssertion)
 {
     int x = 2;
     Assert x to be equal to 3; 
 }
+#ifndef _WIN32
 TEST(ExTest, DivByZero)
 {
     volatile int y = 0;
@@ -419,6 +424,7 @@ TEST(ExTest, StackOverflow)
 {
     int f = factorial(2);
 }
+#endif //_WIN32
 
 #endif
 
@@ -433,6 +439,8 @@ const char* testReason(int status)
 }
 
 #ifdef UNITTEST
+
+#ifdef __linux__
 int main(void)
 {
     int passed = 0;
@@ -556,5 +564,44 @@ int main(void)
     }
     return 0;
 }
+#endif // __linux__
+
+#ifdef _WIN32
+int main(void)
+{
+    int passed = 0;
+    int failed = 0;
+    int status;
+    for (auto tc : exTestCases())
+    {
+        try
+        {
+            tc.run();
+        }
+        catch (int x)
+        {
+        // Assertion failed.
+        }
+        status = TestCaseBuffer::instance().getResult();
+        const char* buffer = TestCaseBuffer::instance().getBuffer();
+        printf("Test case %s::%s is ",tc.getSuiteName(), tc.getTestCaseName());
+        if (status == 0)
+        {
+            passed++;
+            printf("\x1b[32mpassed\x1b[0m.\n");
+        }
+        else
+        {
+            failed++;
+            printf("\x1b[31mfailed\x1b[0m due to %s\n",testReason(status));
+                printf("%s",buffer);
+        }
+        TestCaseBuffer::instance().clear();
+    }
+    return 0;
+}
+#endif
+
+
 #endif
 #endif
