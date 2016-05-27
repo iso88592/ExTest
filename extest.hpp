@@ -19,6 +19,18 @@
 
 typedef void (*ExTestCase)(void);
 
+template <typename T>
+const std::string extest_toString(const T& v)
+{
+    return std::to_string(v);
+}
+
+template <>
+const std::string extest_toString(const std::string& v)
+{
+    return v;
+}
+
 class TestCaseHolder
 {
   public:
@@ -190,7 +202,7 @@ class expect
     }
     expect& operator<< (const T& y)
     {
-        other = std::to_string(y);
+        other = extest_toString(y);
         switch (override)
         {
             case Undef:
@@ -221,26 +233,6 @@ class expect
         }
         return *this;
     }
-    expect& operator<< (const std::string y)
-    {
-        other = y;
-        switch (override)
-        {
-            case Have:
-                operation = "have";
-                check2(std::find(value().begin(), value().end(), y) != value().end());
-                return *this;
-            case NotHave:
-                operation = "not have";
-                check2(std::find(value().begin(), value().end(), y) == value().end());
-                return *this;
-            default:
-                TestCaseBuffer::instance().printf("Not allowed  %s:%d\n",file,line);
-                TestCaseBuffer::instance().pushFail(isAssert);
-                return *this;
-        }
-        return *this;
-    }
     expect& operator<< (const char* y)
     {
         return operator<<(std::string(y));
@@ -248,7 +240,7 @@ class expect
     template <typename T2>
     expect& operator<< (const T2& y)
     {
-        other = std::to_string(y);
+        other = extest_toString(y);
         switch (override)
         {
             case Have:
@@ -302,7 +294,7 @@ class expect
         }
         else
         {
-            TestCaseBuffer::instance().printf("\t%s failed at %s:%d \x1b[31mfailed\x1b[0m: \x1b[1;33mExpected `%s' to be %s `%s'\x1b[0m\n",expectType(),file,line,std::to_string(value()).c_str(),operation.c_str(),other.c_str());
+            TestCaseBuffer::instance().printf("\t%s failed at %s:%d \x1b[31mfailed\x1b[0m: \x1b[1;33mExpected `%s' to be %s `%s'\x1b[0m\n",expectType(),file,line,extest_toString(value()).c_str(),operation.c_str(),other.c_str());
             TestCaseBuffer::instance().pushFail(isAssert);
         }
         valid = false;
